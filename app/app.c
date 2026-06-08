@@ -4,9 +4,11 @@
 #include "diagnostics.h"
 #include "i2c_sensors.h"
 #include "stm32g431_min.h"
+#include "system_time.h"
 #include "tdm_audio.h"
 
 #define LD2_PIN 8U
+#define LED_TOGGLE_INTERVAL_MS 500U
 
 static void led_init(void)
 {
@@ -22,15 +24,9 @@ static void led_toggle(void)
     GPIOB->ODR ^= (1UL << LD2_PIN);
 }
 
-static void delay(volatile unsigned count)
-{
-    while (count-- > 0U) {
-        __asm volatile("nop");
-    }
-}
-
 void app_init(void)
 {
+    system_time_init();
     led_init();
     diagnostics_init();
     can_init();
@@ -40,11 +36,14 @@ void app_init(void)
 
 void app_update(void)
 {
+    static uint32_t last_led_toggle_ms;
+
     diagnostics_update();
     can_update();
     i2c_sensors_update();
     tdm_audio_update();
 
-    led_toggle();
-    delay(800000U);
+    if (system_time_elapsed(&last_led_toggle_ms, LED_TOGGLE_INTERVAL_MS)) {
+        led_toggle();
+    }
 }

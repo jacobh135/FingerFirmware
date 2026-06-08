@@ -13,6 +13,7 @@ add_executable(${TARGET_NAME}
     core/src/main.c
     core/src/startup.c
     core/src/system_stm32g431.c
+    core/src/system_time.c
     app/app.c
     app/diagnostics.c
     audio/tdm_audio.c
