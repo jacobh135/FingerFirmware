@@ -88,6 +88,7 @@ tools/              Newcomer-friendly scripts
 - [ ] Bring up I2C sensor bus.
 - [ ] Bring up FDCAN loopback and external CAN transceiver.
 - [ ] Bring up SAI/TDM audio capture with DMA.
+- [ ] Add CI with GitHub Actions.
 
 ## Notes For New Contributors
 
