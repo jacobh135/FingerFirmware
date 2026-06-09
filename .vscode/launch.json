@@ -10,9 +10,7 @@
       "device": "STM32G431KB",
       "interface": "swd",
       "servertype": "stlink",
-      "serverpath": "/Users/raphaelcherney/Library/Application Support/stm32cube/bundles/stlink-gdbserver/7.13.0+st.3/bin/ST-LINK_gdbserver",
-      "stm32cubeprogrammer": "/Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/Resources/bin",
-      "gdbPath": "/opt/homebrew/bin/arm-none-eabi-gdb",
+      "serverpath": "${workspaceFolder}/tools/ST-LINK_gdbserver",
       "runToEntryPoint": "main",
       "preLaunchTask": "Build nucleo-debug",
       "showDevDebugOutput": "none"

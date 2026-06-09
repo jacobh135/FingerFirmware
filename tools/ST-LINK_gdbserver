@@ -1,0 +1,144 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+script_path="${script_dir}/$(basename "${BASH_SOURCE[0]}")"
+
+valid_executable() {
+    [[ -n "$1" && -x "$1" ]]
+}
+
+valid_programmer_dir() {
+    [[ -n "$1" && -x "$1/STM32_Programmer_CLI" ]]
+}
+
+find_stlink_gdbserver() {
+    if [[ -n "${STLINK_GDB_SERVER:-}" ]]; then
+        if valid_executable "$STLINK_GDB_SERVER"; then
+            printf '%s\n' "$STLINK_GDB_SERVER"
+            return 0
+        fi
+
+        printf 'STLINK_GDB_SERVER is set but is not executable: %s\n' "$STLINK_GDB_SERVER" >&2
+        return 1
+    fi
+
+    if command -v ST-LINK_gdbserver >/dev/null 2>&1; then
+        local server_path
+        server_path="$(command -v ST-LINK_gdbserver)"
+        if [[ "$server_path" != "$script_path" ]]; then
+            printf '%s\n' "$server_path"
+            return 0
+        fi
+    fi
+
+    local candidate
+    for candidate in \
+        "$HOME"/Library/Application\ Support/stm32cube/bundles/stlink-gdbserver/*/bin/ST-LINK_gdbserver \
+        /Applications/STMicroelectronics/STM32Cube/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.stlink-gdb-server.macos64_*/tools/bin/ST-LINK_gdbserver \
+        /opt/ST/STM32CubeCLT*/STLink-gdb-server/bin/ST-LINK_gdbserver \
+        /opt/st/stm32cubeclt*/STLink-gdb-server/bin/ST-LINK_gdbserver
+    do
+        if valid_executable "$candidate"; then
+            printf '%s\n' "$candidate"
+            return 0
+        fi
+    done
+
+    cat >&2 <<'EOF'
+Could not find ST-LINK_gdbserver.
+
+Install STM32Cube tools, add ST-LINK_gdbserver to PATH, or set:
+  STLINK_GDB_SERVER=/absolute/path/to/ST-LINK_gdbserver
+EOF
+    return 1
+}
+
+find_programmer_dir() {
+    if [[ -n "${STM32CUBEPROGRAMMER_PATH:-}" ]]; then
+        if valid_programmer_dir "$STM32CUBEPROGRAMMER_PATH"; then
+            printf '%s\n' "$STM32CUBEPROGRAMMER_PATH"
+            return 0
+        fi
+
+        printf 'STM32CUBEPROGRAMMER_PATH is set but does not contain STM32_Programmer_CLI: %s\n' "$STM32CUBEPROGRAMMER_PATH" >&2
+        return 1
+    fi
+
+    if command -v STM32_Programmer_CLI >/dev/null 2>&1; then
+        dirname "$(command -v STM32_Programmer_CLI)"
+        return 0
+    fi
+
+    local cli
+    for cli in \
+        "$HOME"/Library/Application\ Support/stm32cube/bundles/programmer/*/bin/STM32_Programmer_CLI \
+        /Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/Resources/bin/STM32_Programmer_CLI \
+        /opt/ST/STM32CubeCLT*/STM32CubeProgrammer/bin/STM32_Programmer_CLI \
+        /opt/st/stm32cubeclt*/STM32CubeProgrammer/bin/STM32_Programmer_CLI
+    do
+        if valid_executable "$cli"; then
+            dirname "$cli"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+rewrite_args() {
+    local programmer_dir=""
+    local -a rewritten=()
+
+    while (($# > 0)); do
+        case "$1" in
+            -cp)
+                rewritten+=("$1")
+                shift
+
+                if (($# == 0)); then
+                    break
+                fi
+
+                if valid_programmer_dir "$1"; then
+                    rewritten+=("$1")
+                else
+                    if [[ -z "$programmer_dir" ]]; then
+                        programmer_dir="$(find_programmer_dir || true)"
+                    fi
+
+                    if [[ -n "$programmer_dir" ]]; then
+                        rewritten+=("$programmer_dir")
+                    else
+                        rewritten+=("$1")
+                    fi
+                fi
+                ;;
+            *)
+                rewritten+=("$1")
+                ;;
+        esac
+        shift
+    done
+
+    printf '%s\0' "${rewritten[@]}"
+}
+
+case "${1:-}" in
+    --print-path)
+        find_stlink_gdbserver
+        exit
+        ;;
+    --print-programmer-path)
+        find_programmer_dir
+        exit
+        ;;
+esac
+
+server_path="$(find_stlink_gdbserver)"
+args=()
+while IFS= read -r -d '' arg; do
+    args+=("$arg")
+done < <(rewrite_args "$@")
+
+exec "$server_path" "${args[@]}"

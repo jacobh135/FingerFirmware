@@ -54,6 +54,28 @@ To flash a connected NUCLEO-G431KB:
 cmake --build --preset nucleo-debug --target flash
 ```
 
+## VS Code
+
+Install the recommended extensions from `.vscode/extensions.json`, then run:
+
+```sh
+./tools/setup.sh
+cmake --preset nucleo-debug
+```
+
+Use the **Debug NUCLEO-G431KB via ST-LINK** launch configuration to build and
+debug from VS Code.
+
+The committed VS Code configuration avoids machine-specific absolute paths. If
+Cortex-Debug cannot find the ST-LINK GDB server on your machine, the
+`tools/ST-LINK_gdbserver` wrapper checks common install locations. You can also
+set `STLINK_GDB_SERVER=/absolute/path/to/ST-LINK_gdbserver` in your shell or VS
+Code environment.
+
+If Cortex-Debug cannot find `arm-none-eabi-gdb` or STM32CubeProgrammer, set
+those paths in your VS Code user settings instead of editing
+`.vscode/launch.json`.
+
 ## Useful Commands
 
 ```sh
