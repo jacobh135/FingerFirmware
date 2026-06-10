@@ -17,16 +17,15 @@ add_executable(${TARGET_NAME}
     core/src/uart_log.c
     app/app.c
     app/diagnostics.c
-    audio/tdm_audio.c
     comms/can.c
     comms/i2c.c
+    comms/tdm.c
     sensors/lsm6dsv16b.c
 )
 
 target_include_directories(${TARGET_NAME} PRIVATE
     core/inc
     app
-    audio
     comms
     sensors
 )

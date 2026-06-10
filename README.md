@@ -7,7 +7,7 @@ This project is intentionally simple for fast onboarding:
 - CMake + Ninja build
 - ARM GCC toolchain
 - One NUCLEO-G431KB target
-- Flat module folders for app, comms, sensors, and TDM audio
+- Flat module folders for app, comms, and sensors
 - No IDE-specific build requirement
 
 ## Quick Start
@@ -177,8 +177,7 @@ cmake --build --preset nucleo-debug --target erase
 
 ```text
 app/                Main firmware behavior
-audio/              TDM/SAI audio capture module
-comms/              CAN/FDCAN and I2C peripheral communication modules
+comms/              CAN/FDCAN, I2C, and TDM peripheral communication modules
 core/               Startup and main entry point
 sensors/            Sensor device modules
 boards/             Board-specific linker script and board notes
@@ -203,4 +202,4 @@ tools/              Newcomer-friendly scripts
 
 Start in `core/src/main.c`, then read `app/app.c`.
 
-Application code should live in `app/`, `comms/`, `sensors/`, and `audio/`. Keep chip startup and board-specific setup small and isolated so future CubeMX-generated code can replace it cleanly.
+Application code should live in `app/`, `comms/`, and `sensors/`. Keep chip startup and board-specific setup small and isolated so future CubeMX-generated code can replace it cleanly.

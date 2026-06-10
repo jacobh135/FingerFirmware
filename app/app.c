@@ -5,7 +5,7 @@
 #include "lsm6dsv16b.h"
 #include "stm32g431_min.h"
 #include "system_time.h"
-#include "tdm_audio.h"
+#include "tdm.h"
 #include "uart_log.h"
 
 #define LD2_PIN 8U
@@ -81,7 +81,7 @@ void app_init(void)
     diagnostics_init();
     can_init();
     lsm6dsv16b_init();
-    tdm_audio_init();
+    tdm_init();
 
     uart_log_write("init complete");
     log_i2c_sensor_status();
@@ -96,7 +96,7 @@ void app_update(void)
     diagnostics_update();
     can_update();
     lsm6dsv16b_update();
-    tdm_audio_update();
+    tdm_update();
 
     if (system_time_elapsed(&last_led_toggle_ms, LED_TOGGLE_INTERVAL_MS)) {
         led_toggle();
