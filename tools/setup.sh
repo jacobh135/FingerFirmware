@@ -1,7 +1,8 @@
 #!/usr/bin/env sh
 set -eu
 
-ST_CUBE_URL="https://www.st.com/en/development-tools/stm32cubeprog.html"
+ST_CUBE_PROG_URL="https://www.st.com/en/development-tools/stm32cubeprog.html"
+ST_CUBE_CLT_URL="https://www.st.com/en/development-tools/stm32cubeclt.html"
 LOCAL_BIN="${HOME}/.local/bin"
 ASSUME_YES=0
 CHECK_ONLY=0
@@ -10,11 +11,12 @@ usage() {
     cat <<EOF
 Usage: ./tools/setup.sh [--yes] [--check-only]
 
-Checks and, when possible, installs the tools needed to build and flash this firmware:
+Checks and, when possible, installs the tools needed to build, flash, and debug this firmware:
   - cmake
   - ninja
   - arm-none-eabi-gcc, objcopy, and size
-  - STM32_Programmer_CLI for flash/erase targets
+  - STM32CubeCLT for full flash/debug support
+  - or standalone STM32CubeProgrammer for flash/erase only
 
 Options:
   --yes         Run supported package-manager installs without prompting.
@@ -286,6 +288,7 @@ find_st_cli() {
         found="$(find \
             "${HOME}/STMicroelectronics" \
             "${HOME}/.local/share/stm32cube/bundles/programmer" \
+            /opt/ST \
             /opt/st \
             /usr/local/STMicroelectronics \
             -name STM32_Programmer_CLI -type f -perm -111 -print 2>/dev/null | head -n 1 || true)"
@@ -354,18 +357,25 @@ guide_st_install() {
     os="$1"
 
     warn "STM32CubeProgrammer was not found."
-    printf "\nDownload and install STM32CubeProgrammer from ST:\n"
-    printf "  %s\n\n" "$ST_CUBE_URL"
+    printf "\nRecommended for full flash/debug support:\n"
+    printf "  Download and install STM32CubeCLT from ST:\n"
+    printf "  %s\n\n" "$ST_CUBE_CLT_URL"
+    printf "  STM32CubeCLT includes STM32CubeProgrammer, ST-LINK_gdbserver, GDB, and SVD files.\n\n"
+    printf "Flash-only fallback:\n"
+    printf "  Download and install STM32CubeProgrammer from ST:\n"
+    printf "  %s\n\n" "$ST_CUBE_PROG_URL"
 
     if [ "$os" = "macos" ]; then
         printf "macOS notes:\n"
         printf "  - Use the Mac package matching your CPU when ST offers separate downloads.\n"
-        printf "  - On recent ST releases, the CLI is commonly under:\n"
+        printf "  - STM32CubeCLT is preferred because it covers both flashing and debugging.\n"
+        printf "  - STM32CubeProgrammer is commonly under:\n"
         printf "    /Applications/STMicroelectronics/STM32Cube/STM32CubeProgrammer/STM32CubeProgrammer.app/Contents/Resources/bin/STM32_Programmer_CLI\n"
         printf "  - If the app is blocked by Gatekeeper, right-click the installer and choose Open.\n"
     elif [ "$os" = "linux" ]; then
         printf "Linux notes:\n"
-        printf "  - Install ST's Linux package, then rerun this script.\n"
+        printf "  - Install ST's Linux package for STM32CubeCLT when you want debugging.\n"
+        printf "  - Install STM32CubeProgrammer if you only need flash/erase targets.\n"
         printf "  - If needed, symlink the CLI into ~/.local/bin.\n"
     fi
 }
@@ -418,6 +428,22 @@ print_summary() {
         ok "STM32_Programmer_CLI is on PATH"
     else
         warn "STM32_Programmer_CLI is not on PATH; flash/erase targets will not work yet"
+    fi
+
+    if have arm-none-eabi-gdb; then
+        ok "arm-none-eabi-gdb is on PATH"
+    else
+        warn "arm-none-eabi-gdb is not on PATH; VS Code debugging will not work yet"
+        printf "  Install STM32CubeCLT or another ARM GDB package:\n"
+        printf "  %s\n" "$ST_CUBE_CLT_URL"
+    fi
+
+    script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+    if "${script_dir}/ST-LINK_gdbserver" --print-path >/dev/null 2>&1; then
+        ok "ST-LINK_gdbserver was found"
+    else
+        warn "ST-LINK_gdbserver was not found; install STM32CubeCLT for VS Code debugging"
+        printf "  %s\n" "$ST_CUBE_CLT_URL"
     fi
 }
 

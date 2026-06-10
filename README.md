@@ -10,8 +10,6 @@ This project is intentionally simple for fast onboarding:
 - Flat module folders for app, CAN, I2C sensors, and TDM audio
 - No IDE-specific build requirement
 
-The first firmware image is a small self-contained NUCLEO blink program. It is meant to prove that the build and flash flow works before adding CubeMX-generated HAL setup for FDCAN, I2C, and SAI/TDM.
-
 ## Quick Start
 
 Run the setup helper first:
@@ -21,10 +19,9 @@ Run the setup helper first:
 ```
 
 The script detects your OS, checks for CMake, Ninja, the ARM GCC toolchain, and
-`STM32_Programmer_CLI`, then installs what it can through a supported package
-manager. If a tool needs a manual installer, such as
-[STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html),
-the script prints the exact next steps and reruns the final environment check.
+ST command-line tools, then installs what it can through a supported package
+manager. If an ST tool needs a manual installer, the script prints the next
+steps and reruns the final environment check.
 
 Useful setup variants:
 
@@ -33,12 +30,18 @@ Useful setup variants:
 ./tools/setup.sh --yes
 ```
 
-Manual requirements, if you prefer not to use the script:
+Manual build requirements, if you prefer not to use the script:
 
 - CMake
 - Ninja
 - `arm-none-eabi-gcc`
-- [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html), optional but needed for `flash`
+- `arm-none-eabi-objcopy`
+- `arm-none-eabi-size`
+
+Additional ST tools:
+
+- [STM32CubeCLT](https://www.st.com/en/development-tools/stm32cubeclt.html), recommended for full flash/debug support because it includes STM32CubeProgrammer, the ST-LINK GDB server, GDB, and SVD files
+- [STM32CubeProgrammer](https://www.st.com/en/development-tools/stm32cubeprog.html), smaller flash-only alternative if you do not need VS Code debugging
 
 Then run:
 
@@ -63,6 +66,21 @@ Install the recommended extensions from `.vscode/extensions.json`, then run:
 cmake --preset nucleo-debug
 ```
 
+For debugging, install
+[STM32CubeCLT](https://www.st.com/en/development-tools/stm32cubeclt.html) or
+an equivalent setup that provides both `arm-none-eabi-gdb` and
+`ST-LINK_gdbserver`. STM32CubeCLT includes STM32CubeProgrammer, so it is enough
+for both flashing and debugging. The standalone STM32CubeProgrammer install is
+only enough for flashing.
+
+Check the debugger tools with:
+
+```sh
+./tools/check_env.sh
+tools/ST-LINK_gdbserver --print-path
+tools/ST-LINK_gdbserver --print-programmer-path
+```
+
 Use the **Debug NUCLEO-G431KB via ST-LINK** launch configuration to build and
 debug from VS Code.
 
@@ -72,9 +90,9 @@ Cortex-Debug cannot find the ST-LINK GDB server on your machine, the
 set `STLINK_GDB_SERVER=/absolute/path/to/ST-LINK_gdbserver` in your shell or VS
 Code environment.
 
-If Cortex-Debug cannot find `arm-none-eabi-gdb` or STM32CubeProgrammer, set
-those paths in your VS Code user settings instead of editing
-`.vscode/launch.json`.
+If Cortex-Debug cannot find `arm-none-eabi-gdb` or STM32CubeProgrammer after
+installing your ST tools, set those paths in your VS Code user settings instead
+of editing `.vscode/launch.json`.
 
 ## Useful Commands
 
