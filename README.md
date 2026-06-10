@@ -57,6 +57,75 @@ To flash a connected NUCLEO-G431KB:
 cmake --build --preset nucleo-debug --target flash
 ```
 
+## UART Logging
+
+The firmware initializes USART2 at `115200 8N1` and writes a boot banner plus a
+one-second heartbeat. The heartbeat includes milliseconds, main-loop count, I2C
+sensor status, IMU `WHO_AM_I`, and the latest acceleration sample when valid.
+
+On the NUCLEO-G431KB target this is intended for the ST-LINK virtual COM port
+using USART2 on PA2/PA3. If you are using a different board revision, custom
+wiring, or changed solder bridges, verify the USART2 virtual COM routing in the
+board schematic.
+
+To view logs from a terminal, use the helper script:
+
+```sh
+./tools/serial_monitor.sh
+```
+
+The script finds likely USB serial ports and opens the first match. It uses
+`screen` underneath for reliable serial handling, but the foreground command
+closes with `Ctrl-C`. To list candidates without opening one:
+
+```sh
+./tools/serial_monitor.sh --list
+```
+
+To choose a specific port:
+
+```sh
+./tools/serial_monitor.sh --port /dev/cu.usbmodemXXXX
+```
+
+If the port is busy, the script prints the process holding it. Close that
+program, or explicitly ask the script to kill it:
+
+```sh
+./tools/serial_monitor.sh --kill-busy
+```
+
+For compatibility with older workflows, the helper can also open the port with
+`screen`:
+
+```sh
+./tools/serial_monitor.sh --screen
+```
+
+In `--screen` mode, exit with `Ctrl-A`, then `K`, then `Y`.
+
+You can also use a VS Code serial monitor extension. Connect to the ST-LINK
+virtual COM port with:
+
+- Baud: `115200`
+- Data bits: `8`
+- Parity: `none`
+- Stop bits: `1`
+- Flow control: `none`
+
+Expected output looks like:
+
+```text
+FingerFirmware 0.1.0
+UART: USART2 115200 8N1
+init complete i2c=0 whoami=0x00
+t=1000ms loops=12345 i2c=0 whoami=0x00 accel=invalid
+```
+
+If the serial monitor opens but remains blank, reset the board after connecting
+or reflash the firmware. If it is still blank, check that you selected the
+ST-LINK virtual COM port and that the board routes USART2 PA2/PA3 to that port.
+
 ## VS Code
 
 Install the recommended extensions from `.vscode/extensions.json`, then run:
@@ -123,7 +192,7 @@ tools/              Newcomer-friendly scripts
 - [x] Build and flash NUCLEO-G431KB.
 - [x] Blink LD2 on PB8.
 - [ ] Test setup.sh scripts on new machines
-- [ ] Add UART logging.
+- [x] Add UART logging.
 - [ ] Add CubeMX `.ioc` for final STM32G431KBU6 pinout.
 - [ ] Bring up I2C sensor bus.
 - [ ] Bring up FDCAN loopback and external CAN transceiver.

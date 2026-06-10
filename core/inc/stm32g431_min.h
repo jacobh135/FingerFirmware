@@ -9,6 +9,7 @@
 #define RCC_BASE           (0x40021000UL)
 #define GPIOA_BASE         (AHB2PERIPH_BASE + 0x0000UL)
 #define GPIOB_BASE         (AHB2PERIPH_BASE + 0x0400UL)
+#define USART2_BASE        (APB1PERIPH_BASE + 0x4400UL)
 #define I2C1_BASE          (APB1PERIPH_BASE + 0x5400UL)
 
 typedef struct {
@@ -67,13 +68,29 @@ typedef struct {
     volatile uint32_t TXDR;
 } I2C_TypeDef;
 
+typedef struct {
+    volatile uint32_t CR1;
+    volatile uint32_t CR2;
+    volatile uint32_t CR3;
+    volatile uint32_t BRR;
+    volatile uint32_t GTPR;
+    volatile uint32_t RTOR;
+    volatile uint32_t RQR;
+    volatile uint32_t ISR;
+    volatile uint32_t ICR;
+    volatile uint32_t RDR;
+    volatile uint32_t TDR;
+} USART_TypeDef;
+
 #define RCC                ((RCC_TypeDef *)RCC_BASE)
 #define GPIOA              ((GPIO_TypeDef *)GPIOA_BASE)
 #define GPIOB              ((GPIO_TypeDef *)GPIOB_BASE)
+#define USART2             ((USART_TypeDef *)USART2_BASE)
 #define I2C1               ((I2C_TypeDef *)I2C1_BASE)
 
 #define RCC_AHB2ENR_GPIOAEN (1UL << 0)
 #define RCC_AHB2ENR_GPIOBEN (1UL << 1)
+#define RCC_APB1ENR1_USART2EN (1UL << 17)
 #define RCC_APB1ENR1_I2C1EN (1UL << 21)
 
 #define RCC_APB1RSTR1_I2C1RST (1UL << 21)
@@ -104,5 +121,11 @@ typedef struct {
 #define I2C_ICR_ARLOCF     (1UL << 9)
 #define I2C_ICR_OVRCF      (1UL << 10)
 #define I2C_ICR_TIMOUTCF   (1UL << 12)
+
+#define USART_CR1_UE       (1UL << 0)
+#define USART_CR1_RE       (1UL << 2)
+#define USART_CR1_TE       (1UL << 3)
+#define USART_ISR_TC       (1UL << 6)
+#define USART_ISR_TXE_TXFNF (1UL << 7)
 
 #endif

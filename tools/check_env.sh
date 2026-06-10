@@ -40,6 +40,7 @@ check_tool arm-none-eabi-gcc
 check_tool arm-none-eabi-objcopy
 check_tool arm-none-eabi-size
 check_optional_tool arm-none-eabi-gdb "VS Code debugging"
+check_optional_tool screen "terminal UART logging with tools/serial_monitor.sh --screen"
 
 check_optional_tool STM32_Programmer_CLI "flash/erase targets and ST-LINK debugging"
 check_optional_command "ST-LINK_gdbserver" "VS Code debugging" "${script_dir}/ST-LINK_gdbserver" --print-path
