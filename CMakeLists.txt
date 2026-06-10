@@ -19,7 +19,8 @@ add_executable(${TARGET_NAME}
     app/diagnostics.c
     audio/tdm_audio.c
     comms/can.c
-    sensors/i2c_sensors.c
+    comms/i2c.c
+    sensors/lsm6dsv16b.c
 )
 
 target_include_directories(${TARGET_NAME} PRIVATE

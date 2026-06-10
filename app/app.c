@@ -2,7 +2,7 @@
 
 #include "can.h"
 #include "diagnostics.h"
-#include "i2c_sensors.h"
+#include "lsm6dsv16b.h"
 #include "stm32g431_min.h"
 #include "system_time.h"
 #include "tdm_audio.h"
@@ -37,16 +37,16 @@ static void log_boot(void)
 static void log_i2c_sensor_status(void)
 {
     uart_log_write(" i2c=");
-    uart_log_write_u32((uint32_t)i2c_sensors_status());
+    uart_log_write_u32((uint32_t)lsm6dsv16b_status());
     uart_log_write(" whoami=");
-    uart_log_write_hex_u8(i2c_sensors_imu_who_am_i());
+    uart_log_write_hex_u8(lsm6dsv16b_who_am_i());
 }
 
 static void log_accel_sample(void)
 {
-    i2c_sensors_accel_sample_t accel;
+    lsm6dsv16b_accel_sample_t accel;
 
-    if (!i2c_sensors_acceleration_mg(&accel)) {
+    if (!lsm6dsv16b_acceleration_mg(&accel)) {
         uart_log_write(" accel=invalid");
         return;
     }
@@ -80,7 +80,7 @@ void app_init(void)
     led_init();
     diagnostics_init();
     can_init();
-    i2c_sensors_init();
+    lsm6dsv16b_init();
     tdm_audio_init();
 
     uart_log_write("init complete");
@@ -95,7 +95,7 @@ void app_update(void)
 
     diagnostics_update();
     can_update();
-    i2c_sensors_update();
+    lsm6dsv16b_update();
     tdm_audio_update();
 
     if (system_time_elapsed(&last_led_toggle_ms, LED_TOGGLE_INTERVAL_MS)) {

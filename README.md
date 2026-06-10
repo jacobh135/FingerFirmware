@@ -7,7 +7,7 @@ This project is intentionally simple for fast onboarding:
 - CMake + Ninja build
 - ARM GCC toolchain
 - One NUCLEO-G431KB target
-- Flat module folders for app, CAN, I2C sensors, and TDM audio
+- Flat module folders for app, comms, sensors, and TDM audio
 - No IDE-specific build requirement
 
 ## Quick Start
@@ -178,9 +178,9 @@ cmake --build --preset nucleo-debug --target erase
 ```text
 app/                Main firmware behavior
 audio/              TDM/SAI audio capture module
-comms/              CAN/FDCAN protocol and transport module
+comms/              CAN/FDCAN and I2C peripheral communication modules
 core/               Startup and main entry point
-sensors/            I2C sensor module
+sensors/            Sensor device modules
 boards/             Board-specific linker script and board notes
 cmake/              Toolchain and helper CMake files
 docs/               Bring-up notes
