@@ -5,8 +5,10 @@
 
 #define PERIPH_BASE        (0x40000000UL)
 #define APB1PERIPH_BASE    PERIPH_BASE
+#define APB2PERIPH_BASE    (PERIPH_BASE + 0x00010000UL)
 #define AHB2PERIPH_BASE    (PERIPH_BASE + 0x08000000UL)
 #define RCC_BASE           (0x40021000UL)
+#define SYSCFG_BASE        (APB2PERIPH_BASE + 0x0000UL)
 #define GPIOA_BASE         (AHB2PERIPH_BASE + 0x0000UL)
 #define GPIOB_BASE         (AHB2PERIPH_BASE + 0x0400UL)
 #define USART2_BASE        (APB1PERIPH_BASE + 0x4400UL)
@@ -55,6 +57,11 @@ typedef struct {
 } RCC_TypeDef;
 
 typedef struct {
+    volatile uint32_t MEMRMP;
+    volatile uint32_t CFGR1;
+} SYSCFG_TypeDef;
+
+typedef struct {
     volatile uint32_t CR1;
     volatile uint32_t CR2;
     volatile uint32_t OAR1;
@@ -83,6 +90,7 @@ typedef struct {
 } USART_TypeDef;
 
 #define RCC                ((RCC_TypeDef *)RCC_BASE)
+#define SYSCFG             ((SYSCFG_TypeDef *)SYSCFG_BASE)
 #define GPIOA              ((GPIO_TypeDef *)GPIOA_BASE)
 #define GPIOB              ((GPIO_TypeDef *)GPIOB_BASE)
 #define USART2             ((USART_TypeDef *)USART2_BASE)
@@ -92,8 +100,12 @@ typedef struct {
 #define RCC_AHB2ENR_GPIOBEN (1UL << 1)
 #define RCC_APB1ENR1_USART2EN (1UL << 17)
 #define RCC_APB1ENR1_I2C1EN (1UL << 21)
+#define RCC_APB2ENR_SYSCFGEN (1UL << 0)
 
 #define RCC_APB1RSTR1_I2C1RST (1UL << 21)
+
+#define SYSCFG_CFGR1_I2C_PB7_FMP (1UL << 17)
+#define SYSCFG_CFGR1_I2C1_FMP (1UL << 20)
 
 #define I2C_CR1_PE         (1UL << 0)
 

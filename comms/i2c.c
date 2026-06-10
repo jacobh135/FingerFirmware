@@ -8,6 +8,9 @@
 #define I2C_AF4 4U
 
 #define I2C_TIMEOUT_MS 10U
+/* 1 Mbit/s Fast-mode Plus from the reset-default 16 MHz HSI clock.
+   The bus still needs external pull-ups sized for the Fm+ rise-time limit. */
+#define I2C_TIMINGR_1MHZ_HSI16_FMP 0x00200307U
 
 #define I2C_ERROR_FLAGS (I2C_ISR_NACKF | I2C_ISR_BERR | I2C_ISR_ARLO | I2C_ISR_OVR | I2C_ISR_TIMEOUT)
 #define I2C_CLEAR_FLAGS (I2C_ICR_NACKCF | I2C_ICR_STOPCF | I2C_ICR_BERRCF | I2C_ICR_ARLOCF | I2C_ICR_OVRCF | I2C_ICR_TIMOUTCF)
@@ -30,6 +33,9 @@ static void i2c_gpio_init(void)
     RCC->AHB2ENR |= RCC_AHB2ENR_GPIOAEN | RCC_AHB2ENR_GPIOBEN;
     (void)RCC->AHB2ENR;
 
+    RCC->APB2ENR |= RCC_APB2ENR_SYSCFGEN;
+    (void)RCC->APB2ENR;
+
     GPIOA->MODER &= ~(3UL << (I2C_SCL_PIN * 2U));
     GPIOA->MODER |= (2UL << (I2C_SCL_PIN * 2U));
     GPIOA->OTYPER |= (1UL << I2C_SCL_PIN);
@@ -45,6 +51,8 @@ static void i2c_gpio_init(void)
     GPIOB->PUPDR &= ~(3UL << (I2C_SDA_PIN * 2U));
     GPIOB->PUPDR |= (1UL << (I2C_SDA_PIN * 2U));
     gpio_set_alternate_function(GPIOB, I2C_SDA_PIN, I2C_AF4);
+
+    SYSCFG->CFGR1 |= SYSCFG_CFGR1_I2C1_FMP | SYSCFG_CFGR1_I2C_PB7_FMP;
 }
 
 static void i2c_clear_flags(void)
@@ -114,7 +122,7 @@ void i2c_init(void)
     RCC->APB1RSTR1 &= ~RCC_APB1RSTR1_I2C1RST;
 
     I2C1->CR1 = 0U;
-    I2C1->TIMINGR = 0x30420F13U; /* 100 kHz from the reset-default 16 MHz HSI clock. */
+    I2C1->TIMINGR = I2C_TIMINGR_1MHZ_HSI16_FMP;
     i2c_clear_flags();
     I2C1->CR1 = I2C_CR1_PE;
 }
