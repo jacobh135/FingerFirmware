@@ -1,0 +1,17 @@
+TDM audio accelerometer capture summary
+-----------------------------------------
+axis analyzed       : y
+sample rate         : 15625 Hz
+samples             : 4608
+duration            : 0.295 s
+raw DC offset       : 115.1 counts
+peak amplitude (AC) : 64075.4 counts
+RMS amplitude (AC)  : 18188.5 counts
+dominant frequency  : 501.8 Hz
+
+Notes:
+- 'raw DC offset' is mostly gravity + sensor bias on this axis, removed
+  before computing peak/RMS/dominant frequency.
+- dominant frequency is the single strongest FFT bin; for tap/voice
+  content look at the spectrogram image for the full picture, a single
+  number won't capture a changing signal.

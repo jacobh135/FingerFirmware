@@ -1,5 +1,6 @@
 #include "uart_log.h"
 
+#include <stdbool.h>
 #include <stddef.h>
 
 #include "stm32g431_min.h"
@@ -10,6 +11,13 @@
 #define UART_LOG_BAUD 115200U
 #define UART_LOG_PCLK_HZ 16000000U
 #define UART_LOG_BRR ((UART_LOG_PCLK_HZ + (UART_LOG_BAUD / 2U)) / UART_LOG_BAUD)
+
+/* USART receive bits not present in stm32g431_min.h (it defines only the TX
+   bits used so far). Bit positions per the STM32G4 reference manual / CMSIS:
+   RXNE = ISR bit 5, ORE = ISR bit 3, ORECF = ICR bit 3. */
+#define USART_ISR_RXNE_RXFNE (1UL << 5)
+#define USART_ISR_ORE        (1UL << 3)
+#define USART_ICR_ORECF      (1UL << 3)
 
 static int uart_log_ready;
 
@@ -154,4 +162,25 @@ int _write(int file, char *ptr, int len)
     }
 
     return len;
+}
+
+bool uart_log_read_byte(uint8_t *out_byte)
+{
+    if (!uart_log_ready || (out_byte == NULL)) {
+        return false;
+    }
+
+    /* Clear a pending overrun (e.g. bytes arrived while we weren't polling)
+       so RXNE keeps reporting new data instead of getting stuck. Reading RDR
+       does not clear ORE; it must be cleared explicitly via ICR. */
+    if ((USART2->ISR & USART_ISR_ORE) != 0U) {
+        USART2->ICR = USART_ICR_ORECF;
+    }
+
+    if ((USART2->ISR & USART_ISR_RXNE_RXFNE) == 0U) {
+        return false;
+    }
+
+    *out_byte = (uint8_t)USART2->RDR;
+    return true;
 }

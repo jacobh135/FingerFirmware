@@ -44,6 +44,14 @@ void (*const vector_table[])(void) = {
 
 void Reset_Handler(void)
 {
+    /* Enable the FPU (CP10 + CP11 full access) before anything else. The build
+       uses -mfloat-abi=hard, so the compiler may emit FPU instructions in the
+       startup copy/zero loops below; without this the first one hard-faults
+       (symptom: total silence at boot). */
+    *(volatile uint32_t *)0xE000ED88U |= (0xFU << 20);
+    __asm volatile ("dsb");
+    __asm volatile ("isb");
+
     uint32_t *src = &_sidata;
     uint32_t *dst = &_sdata;
 

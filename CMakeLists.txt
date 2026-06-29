@@ -20,6 +20,8 @@ add_executable(${TARGET_NAME}
     comms/can.c
     comms/i2c.c
     comms/tdm.c
+    comms/texture.c
+    comms/fft.c
     sensors/lsm6dsv16b.c
 )
 

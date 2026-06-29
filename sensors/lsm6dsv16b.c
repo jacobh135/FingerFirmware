@@ -15,8 +15,33 @@
 #define LSM6DSV16B_REG_CTRL8 0x17U
 #define LSM6DSV16B_REG_OUTZ_L_A 0x28U
 
+/* TDM (audio accelerometer / bone-conduction) configuration registers.
+   Addresses and bitfields verified against ST's lsm6dsv16b_reg.h/.c driver. */
+#define LSM6DSV16B_REG_TDM_CFG0 0x6CU
+#define LSM6DSV16B_REG_TDM_CFG1 0x6DU
+#define LSM6DSV16B_REG_TDM_CFG2 0x6EU
+
 #define LSM6DSV16B_CTRL1_XL_ODR_60HZ 0x05U
 #define LSM6DSV16B_CTRL8_XL_FS_2G 0x00U
+
+/* TDM_CFG0: tdm_wclk_bclk_sel=0, tdm_wclk=0b01 -> 16 kHz WCLK / 2.048 MHz BCLK;
+   tdm_slot_sel=0 (data in slots 0-2); tdm_bclk_edge_sel=0 (BCLK rising);
+   tdm_delayed_cfg=0 (no delay: slot0 MSB on first BCLK after WCLK rising edge).
+   bit7 MUST be 1: the AN5911 register map (Table 2) shows TDM_CFG0 bit7 as a
+   fixed '1'. ST's driver only does read-modify-write so it preserves the reset
+   value; a direct write of 0x02 clears it and the TDM output never runs. */
+#define LSM6DSV16B_TDM_CFG0_16KHZ_SLOTS012 0x82U
+
+/* TDM_CFG1: tdm_xl_x_en=1 (bit7), tdm_xl_y_en=1 (bit6), tdm_xl_z_en=1 (bit5),
+   tdm_axes_ord_sel=0b00 -> axis order Z,Y,X => slot0=Z, slot1=Y, slot2=X. */
+#define LSM6DSV16B_TDM_CFG1_XYZ_ORDER_ZYX 0xE0U
+
+/* TDM_CFG2: tdm_fs_xl=0b00 (TDM full scale +/-2 g), tdm_data_mask=0. */
+#define LSM6DSV16B_TDM_CFG2_FS_2G 0x00U
+
+/* CTRL1: op_mode_xl=0b010 (HIGH_PERFORMANCE_TDM_MD) in bits[6:4],
+   odr_xl=0b0101 (60 Hz) in bits[3:0] for the primary I2C channel. */
+#define LSM6DSV16B_CTRL1_XL_TDM_MODE_ODR60 0x25U
 
 static lsm6dsv16b_status_t sensor_status;
 static lsm6dsv16b_accel_sample_t latest_accel;
@@ -85,6 +110,35 @@ void lsm6dsv16b_init(void)
     }
 
     sensor_status = LSM6DSV16B_STATUS_READY;
+}
+
+bool lsm6dsv16b_enable_tdm_audio(void)
+{
+    if (sensor_status != LSM6DSV16B_STATUS_READY) {
+        return false;
+    }
+
+    /* Configure the TDM interface before switching the accelerometer into TDM
+       mode, so the slot/clock setup is valid the moment the outputs go live. */
+    if (!lsm6dsv16b_write_u8(LSM6DSV16B_REG_TDM_CFG2, LSM6DSV16B_TDM_CFG2_FS_2G) ||
+        !lsm6dsv16b_write_u8(LSM6DSV16B_REG_TDM_CFG1, LSM6DSV16B_TDM_CFG1_XYZ_ORDER_ZYX) ||
+        !lsm6dsv16b_write_u8(LSM6DSV16B_REG_TDM_CFG0, LSM6DSV16B_TDM_CFG0_16KHZ_SLOTS012)) {
+        return false;
+    }
+
+    /* Switch the accelerometer into high-performance TDM mode. This starts the
+       device driving BCLK (PA8), WCLK (PA9), and TDMout (PA10). */
+    return lsm6dsv16b_write_u8(LSM6DSV16B_REG_CTRL1, LSM6DSV16B_CTRL1_XL_TDM_MODE_ODR60);
+}
+
+void lsm6dsv16b_dump_tdm_regs(uint8_t *ctrl1, uint8_t *cfg0, uint8_t *cfg1, uint8_t *cfg2)
+{
+    uint8_t v;
+
+    *ctrl1 = lsm6dsv16b_read_u8(LSM6DSV16B_REG_CTRL1, &v) ? v : 0xEEU;
+    *cfg0 = lsm6dsv16b_read_u8(LSM6DSV16B_REG_TDM_CFG0, &v) ? v : 0xEEU;
+    *cfg1 = lsm6dsv16b_read_u8(LSM6DSV16B_REG_TDM_CFG1, &v) ? v : 0xEEU;
+    *cfg2 = lsm6dsv16b_read_u8(LSM6DSV16B_REG_TDM_CFG2, &v) ? v : 0xEEU;
 }
 
 void lsm6dsv16b_update(void)
