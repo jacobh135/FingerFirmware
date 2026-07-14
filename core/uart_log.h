@@ -16,4 +16,14 @@ void uart_log_write_hex_u8(uint8_t value);
    USART2 RX is already enabled (CR1 RE) and wired on PA3; this just reads it. */
 bool uart_log_read_byte(uint8_t *out_byte);
 
+/* Write raw bytes verbatim (no newline translation). For binary streaming
+   (e.g. live audio). Blocks until each byte is queued to the UART. */
+void uart_log_write_bytes(const uint8_t *data, uint32_t len);
+
+/* Change the USART2 baud rate at runtime. Waits for the current transmission
+   to finish, reconfigures, and re-enables. baud must divide cleanly from the
+   16 MHz UART clock for low error (e.g. 1000000 and 2000000 are exact;
+   921600 is NOT and will garble). Returns the actual configured baud. */
+uint32_t uart_log_set_baud(uint32_t baud);
+
 #endif

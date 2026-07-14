@@ -184,3 +184,35 @@ bool uart_log_read_byte(uint8_t *out_byte)
     *out_byte = (uint8_t)USART2->RDR;
     return true;
 }
+
+void uart_log_write_bytes(const uint8_t *data, uint32_t len)
+{
+    if (!uart_log_ready || (data == NULL)) {
+        return;
+    }
+
+    for (uint32_t i = 0U; i < len; i++) {
+        while ((USART2->ISR & USART_ISR_TXE_TXFNF) == 0U) {
+        }
+        USART2->TDR = (uint32_t)data[i];
+    }
+}
+
+uint32_t uart_log_set_baud(uint32_t baud)
+{
+    if (!uart_log_ready || (baud == 0U)) {
+        return 0U;
+    }
+
+    /* Let any in-flight byte finish before we change the divisor. */
+    while ((USART2->ISR & USART_ISR_TC) == 0U) {
+    }
+
+    /* Disable, reprogram BRR, re-enable. Rounded divide for lowest error. */
+    USART2->CR1 &= ~USART_CR1_UE;
+    uint32_t brr = (UART_LOG_PCLK_HZ + (baud / 2U)) / baud;
+    USART2->BRR = brr;
+    USART2->CR1 |= USART_CR1_UE;
+
+    return UART_LOG_PCLK_HZ / brr;   /* actual baud achieved */
+}

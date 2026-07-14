@@ -1,5 +1,7 @@
 #include "app.h"
 
+#include <stddef.h>
+
 #include "can.h"
 #include "diagnostics.h"
 #include "lsm6dsv16b.h"
@@ -119,6 +121,20 @@ static uint32_t drain_index;
    Classification happens off-board; this is just the raw feature stream. */
 static bool texture_streaming;
 
+/* Continuous LIVE AUDIO streaming. Toggled with 'a'. Raises the UART to 1 Mbaud
+   and streams raw single-axis int16 samples continuously (binary, framed) so a
+   host can reconstruct a live waveform / WAV. Single axis at full ~15.6 kHz
+   keeps the whole audio bandwidth while fitting the link with margin. Mutually
+   exclusive with texture streaming and the heartbeat. Uses the texture axis
+   selection (x/y/z keys); default Z. */
+static bool audio_streaming;
+static tdm_stream_cursor_t audio_cursor;
+static texture_axis_t audio_axis = TEXTURE_AXIS_Z;   /* default Z; x/y/z selects */
+#define AUDIO_BAUD  1000000U
+#define AUDIO_SYNC0 0xA5U
+#define AUDIO_SYNC1 0x5AU
+#define AUDIO_CHUNK 128U         /* samples per framed chunk (== ring depth) */
+
 static void emit_feature_line(const texture_features_t *f)
 {
     uart_log_write("feat ");
@@ -177,12 +193,31 @@ static void poll_capture_trigger(void)
         } else {
             uart_log_write("\n[texture] streaming OFF\n");
         }
+    } else if (byte == (uint8_t)'a') {
+        /* Toggle continuous LIVE AUDIO streaming (raw binary, 1 Mbaud). */
+        audio_streaming = !audio_streaming;
+        if (audio_streaming) {
+            /* Announce (at the current baud) the axis + format, then switch up
+               to the high baud so the host can re-open at 1 Mbaud. */
+            uart_log_write("\n[audio] streaming ON axis=");
+            uart_log_write((audio_axis == TEXTURE_AXIS_X) ? "x"
+                         : (audio_axis == TEXTURE_AXIS_Y) ? "y" : "z");
+            uart_log_write(" fmt=int16le sync=A55A baud=1000000\n");
+            uart_log_flush();
+            tdm_stream_cursor_init(&audio_cursor);
+            (void)uart_log_set_baud(AUDIO_BAUD);
+        } else {
+            /* Drop back to the normal log baud and announce off. */
+            (void)uart_log_set_baud(115200U);
+            uart_log_write("\n[audio] streaming OFF\n");
+        }
     } else if ((byte == (uint8_t)'x') || (byte == (uint8_t)'y') || (byte == (uint8_t)'z')) {
-        /* Select which axis the texture features are computed on. */
+        /* Select which axis both texture features AND audio use. */
         texture_axis_t axis = (byte == (uint8_t)'x') ? TEXTURE_AXIS_X
                             : (byte == (uint8_t)'y') ? TEXTURE_AXIS_Y
                             : TEXTURE_AXIS_Z;
         texture_set_axis(axis);
+        audio_axis = axis;
         uart_log_write("\n[texture] axis=");
         uart_log_write((byte == (uint8_t)'x') ? "x"
                      : (byte == (uint8_t)'y') ? "y" : "z");
@@ -252,7 +287,12 @@ void app_update(void)
     can_update();
     lsm6dsv16b_update();
     tdm_update();
-    texture_update();
+    if (!audio_streaming) {
+        /* Skip the per-window FFT while live-audio streaming -- those cycles
+           are needed to drain the audio stream, and features aren't used in
+           audio mode anyway. */
+        texture_update();
+    }
 
     if (system_time_elapsed(&last_led_toggle_ms, LED_TOGGLE_INTERVAL_MS)) {
         led_toggle();
@@ -262,7 +302,30 @@ void app_update(void)
         case APP_MODE_NORMAL:
             poll_capture_trigger();
 
-            if (texture_streaming) {
+            if (audio_streaming) {
+                /* LIVE AUDIO: pull all newly-arrived frames' selected axis and
+                   push them out as framed binary as fast as the (1 Mbaud) UART
+                   allows. The link has ~3x margin over the single-axis data
+                   rate, so we drain faster than samples arrive and the live
+                   ring never overflows. Framing: [0xA5 0x5A][count_lo count_hi]
+                   [int16 le samples...] so the host can lock on and spot gaps. */
+                int16_t axbuf[AUDIO_CHUNK];
+                int16_t *xp = (audio_axis == TEXTURE_AXIS_X) ? axbuf : NULL;
+                int16_t *yp = (audio_axis == TEXTURE_AXIS_Y) ? axbuf : NULL;
+                int16_t *zp = (audio_axis == TEXTURE_AXIS_Z) ? axbuf : NULL;
+
+                uint32_t got = tdm_stream_pull(&audio_cursor, xp, yp, zp,
+                                               AUDIO_CHUNK);
+                if (got > 0U) {
+                    uint8_t hdr[4];
+                    hdr[0] = AUDIO_SYNC0;
+                    hdr[1] = AUDIO_SYNC1;
+                    hdr[2] = (uint8_t)(got & 0xFFU);
+                    hdr[3] = (uint8_t)((got >> 8) & 0xFFU);
+                    uart_log_write_bytes(hdr, 4U);
+                    uart_log_write_bytes((const uint8_t *)axbuf, got * 2U);
+                }
+            } else if (texture_streaming) {
                 /* Emit every completed feature window. While streaming we skip
                    the 1 Hz heartbeat so the host sees a clean feature-only
                    stream. texture_take() returns at most one window per call;
